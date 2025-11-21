@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+{% block title %}{{ doc_type_name }} - 财务记账系统{% endblock %}
+
+{% block content %}
+<h2>{{ doc_type_name }}</h2>
+<p class="text-muted">{{ doc_type_desc }}</p>
+
+{% if error %}
+<div style="padding: 12px; background: #fee2e2; color: #b91c1c; border-radius: 8px; margin-bottom: 16px;">
+    提交失败：{{ error }}
+</div>
+{% endif %}
+
+{% if success %}
+<div style="padding: 12px; background: #dcfce7; color: #15803d; border-radius: 8px; margin-bottom: 16px;">
+    业务单据创建成功！<a href="/business/list">查看业务单据列表</a> 或 <a href="/transactions/view">查看交易列表</a>
+</div>
+{% endif %}
+
+    <form method="post" id="businessForm" action="{{ request.url }}">
+    <div class="two-columns">
+        <div>
+            <label for="doc_no">单据编号（可选）</label>
+            <input type="text" id="doc_no" name="doc_no" placeholder="例如：XS-20251118-001">
+        </div>
+        <div>
+            <label for="doc_date">业务日期 <span style="color: #dc2626;">*</span></label>
+            <input type="date" id="doc_date" name="doc_date" value="{{ today }}" required>
+        </div>
+    </div>
+
+    <div class="two-columns">
+        <div>
+            <label for="partner_name">往来单位/员工</label>
+            <input type="text" id="partner_name" name="partner_name" placeholder="客户/供应商/员工姓名">
+        </div>
+        <div>
+            <label for="reference_no">外部参考号</label>
+            <input type="text" id="reference_no" name="reference_no" placeholder="例如：订单号、合同号">
+        </div>
+    </div>
+
+    <label for="description">摘要说明</label>
+    <textarea id="description" name="description" rows="2" placeholder="简要描述本次业务"></textarea>
+
+    {% if show_cashflow %}
+    <label for="cashflow_type_id">现金流量分类（默认）<span style="color: #dc2626;">*</span></label>
+    <select id="cashflow_type_id" name="cashflow_type_id" required>
+        <option value="">请选择（收付款业务必须选择）</option>
+        {% for cf_type in cashflow_types %}
+        <option value="{{ cf_type.id }}">{{ cf_type.name }}</option>
+        {% endfor %}
+    </select>
+    <p style="margin-top: -8px; margin-bottom: 16px; color: #dc2626; font-size: 13px;">
+        ⚠️ 收付款业务必须选择现金流量分类，否则现金流量表不会显示
+    </p>
+    {% else %}
+    <div id="cashflowWarning" style="display: none; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; margin-bottom: 16px; border-radius: 4px;">
+        <p style="margin: 0; color: #92400e; font-size: 13px;">
+            <strong>提示：</strong>检测到您选择了现金/银行类科目，建议选择现金流量分类以确保现金流量表正确显示。
+        </p>
+    </div>
+    {% endif %}
+
+    <hr style="margin: 24px 0; border-color: var(--border-color);">
+    <h3 style="margin-bottom: 8px;">业务明细</h3>
+    <p style="margin-bottom: 16px; color: #64748b;">每条明细描述一对借贷科目与金额</p>
+
+    <div id="itemsContainer">
+        <div class="split-box item-row" data-item-index="0">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin: 0;">明细 1</h4>
+                <button type="button" class="btn remove-item" style="display: none; background: #dc2626; padding: 4px 12px; font-size: 12px;">删除</button>
+            </div>
+            <div class="two-columns">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>借方科目 <span style="color: #dc2626;">*</span></label>
+                        <button type="button" class="btn btn-sm" style="background: #10b981; color: white; padding: 2px 8px; font-size: 11px;" 
+                                onclick="showQuickAddAccount('debit', 0)">➕ 快速添加</button>
+                    </div>
+                    <select class="debit-account" name="items_0_debit_account_guid" id="items_0_debit_account_guid" required>
+                        <option value="">请选择科目</option>
+                        {% for account in accounts %}
+                        <option value="{{ account.guid }}">{{ account.code or "" }} {{ account.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>贷方科目 <span style="color: #dc2626;">*</span></label>
+                        <button type="button" class="btn btn-sm" style="background: #10b981; color: white; padding: 2px 8px; font-size: 11px;" 
+                                onclick="showQuickAddAccount('credit', 0)">➕ 快速添加</button>
+                    </div>
+                    <select class="credit-account" name="items_0_credit_account_guid" id="items_0_credit_account_guid" required>
+                        <option value="">请选择科目</option>
+                        {% for account in accounts %}
+                        <option value="{{ account.guid }}">{{ account.code or "" }} {{ account.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="two-columns">
+                <div>
+                    <label>金额（元） <span style="color: #dc2626;">*</span></label>
+                    <input type="number" step="0.01" name="items_0_amount" required>
+                </div>
+                <div>
+                    <label>明细描述</label>
+                    <input type="text" name="items_0_description" placeholder="例如：销售收入">
+                </div>
+            </div>
+            <div>
+                <label>备注</label>
+                <input type="text" name="items_0_memo" placeholder="可留空">
+            </div>
+            {% if show_cashflow %}
+            <div>
+                <label>现金流量分类（行级）</label>
+                <select name="items_0_cashflow_type_id">
+                    <option value="">使用单据默认值</option>
+                    {% for cf_type in cashflow_types %}
+                    <option value="{{ cf_type.id }}">{{ cf_type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <button type="button" class="btn" style="background: #6b7280; margin-bottom: 16px;" id="addItemBtn">➕ 添加明细</button>
+
+    <div style="margin-top: 24px;">
+        <button type="submit" class="btn">提交业务单据</button>
+        <a href="/business/list" class="btn" style="background: #6b7280; margin-left: 8px;">返回列表</a>
+    </div>
+</form>
+
+<!-- 快速添加科目模态框 -->
+<div class="modal fade" id="quickAddAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">快速添加科目</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickAddAccountForm">
+                <div class="modal-body">
+                    <input type="hidden" id="quickAddTarget" value="">
+                    <input type="hidden" id="quickAddItemIndex" value="">
+                    
+                    <div class="mb-3">
+                        <label for="quickAccountName" class="form-label">科目名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="quickAccountName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quickAccountType" class="form-label">科目类型 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="quickAccountType" required>
+                            <option value="">请选择</option>
+                            <option value="ASSET">资产</option>
+                            <option value="CURRENT_ASSET">流动资产</option>
+                            <option value="FIXED_ASSET">固定资产</option>
+                            <option value="LIABILITY">负债</option>
+                            <option value="CURRENT_LIABILITY">流动负债</option>
+                            <option value="EQUITY">所有者权益</option>
+                            <option value="INCOME">收入</option>
+                            <option value="REVENUE">营业收入</option>
+                            <option value="EXPENSE">费用</option>
+                            <option value="COST">成本</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quickAccountCode" class="form-label">科目编码（可选）</label>
+                        <input type="text" class="form-control" id="quickAccountCode">
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="quickIsCash">
+                        <label class="form-check-label" for="quickIsCash">现金/银行类科目</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">添加并选择</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let itemIndex = 1;
+
+document.getElementById('addItemBtn').addEventListener('click', function() {
+    const container = document.getElementById('itemsContainer');
+    const firstItem = container.querySelector('.item-row');
+    const newItem = firstItem.cloneNode(true);
+    
+    // 更新索引
+    const currentIndex = itemIndex;
+    newItem.setAttribute('data-item-index', currentIndex);
+    const h4 = newItem.querySelector('h4');
+    if (h4) h4.textContent = `明细 ${currentIndex + 1}`;
+    
+    // 更新所有输入框的 name 和 id 属性
+    newItem.querySelectorAll('input, select').forEach(input => {
+        if (input.name) {
+            input.name = input.name.replace(/items_\d+_/, `items_${currentIndex}_`);
+            input.id = input.id.replace(/items_\d+_/, `items_${currentIndex}_`);
+            input.value = '';
+        }
+    });
+    
+    // 更新快速添加按钮的 onclick
+    newItem.querySelectorAll('button[onclick*="showQuickAddAccount"]').forEach(btn => {
+        const onclick = btn.getAttribute('onclick');
+        if (onclick) {
+            const match = onclick.match(/showQuickAddAccount\('(\w+)',\s*(\d+)\)/);
+            if (match) {
+                btn.setAttribute('onclick', `showQuickAddAccount('${match[1]}', ${currentIndex})`);
+            }
+        }
+    });
+    
+    // 显示删除按钮
+    newItem.querySelector('.remove-item').style.display = 'block';
+    
+    container.appendChild(newItem);
+    itemIndex++;
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-item')) {
+        const itemRow = e.target.closest('.item-row');
+        if (document.querySelectorAll('.item-row').length > 1) {
+            itemRow.remove();
+        } else {
+            alert('至少需要一条明细');
+        }
+    }
+});
+
+// 快速添加科目
+function showQuickAddAccount(target, itemIndex) {
+    document.getElementById('quickAddTarget').value = target;
+    document.getElementById('quickAddItemIndex').value = itemIndex;
+    const modal = new bootstrap.Modal(document.getElementById('quickAddAccountModal'));
+    modal.show();
+}
+
+document.getElementById('quickAddAccountForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('quickAccountName').value;
+    const accountType = document.getElementById('quickAccountType').value;
+    const code = document.getElementById('quickAccountCode').value;
+    const isCash = document.getElementById('quickIsCash').checked;
+    const target = document.getElementById('quickAddTarget').value;
+    const itemIndex = document.getElementById('quickAddItemIndex').value;
+    
+    if (!name || !accountType) {
+        alert('请填写科目名称和类型');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/accounts/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                account_type: accountType,
+                code: code || null,
+                is_cash: isCash,
+            }),
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || '添加失败');
+        }
+        
+        const newAccount = await response.json();
+        
+        // 添加到下拉框
+        const selectId = `items_${itemIndex}_${target}_account_guid`;
+        const select = document.getElementById(selectId);
+        if (select) {
+            const option = document.createElement('option');
+            option.value = newAccount.guid;
+            option.textContent = (newAccount.code ? newAccount.code + ' ' : '') + newAccount.name;
+            option.selected = true;
+            select.appendChild(option);
+            
+            // 如果新科目是现金类，触发检查
+            if (newAccount.is_cash) {
+                checkCashAccount(selectId);
+            }
+        }
+        
+        // 关闭模态框并重置表单
+        bootstrap.Modal.getInstance(document.getElementById('quickAddAccountModal')).hide();
+        document.getElementById('quickAddAccountForm').reset();
+        
+        alert('科目添加成功！已自动选择该科目。');
+    } catch (error) {
+        alert('添加失败：' + error.message);
+    }
+});
+
+// 检查是否选择了现金类科目
+async function checkCashAccount(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select || !select.value) return;
+    
+    try {
+        const response = await fetch(`/api/accounts/${select.value}`);
+        if (response.ok) {
+            const account = await response.json();
+            if (account.is_cash) {
+                // 显示提示
+                const warning = document.getElementById('cashflowWarning');
+                if (warning) {
+                    warning.style.display = 'block';
+                }
+                
+                // 如果表单中有现金流量分类选择框，提示选择
+                const cfSelect = document.getElementById('cashflow_type_id');
+                if (cfSelect && !cfSelect.value) {
+                    cfSelect.style.borderColor = '#dc2626';
+                    cfSelect.addEventListener('change', function() {
+                        if (this.value) {
+                            this.style.borderColor = '';
+                        }
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.error('检查科目失败:', error);
+    }
+}
+
+// 监听科目选择变化
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('debit-account') || e.target.classList.contains('credit-account')) {
+        checkCashAccount(e.target.id);
+    }
+});
+</script>
+{% endblock %}
+

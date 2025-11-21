@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}会计科目管理 - 财务记账系统{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📑 会计科目管理</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+            ➕ 添加科目
+        </button>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>错误：</strong>{{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>成功：</strong>{{ success }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>科目名称</th>
+                            <th>编码</th>
+                            <th>类型</th>
+                            <th>是否现金/银行</th>
+                            <th>余额</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in accounts %}
+                        <tr>
+                            <td>
+                                <strong>{{ account.name }}</strong>
+                                {% if account.hidden %}
+                                <span class="badge bg-secondary">隐藏</span>
+                                {% endif %}
+                                {% if account.placeholder %}
+                                <span class="badge bg-info">分类</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ account.code or "-" }}</td>
+                            <td>{{ account.account_type }}</td>
+                            <td>
+                                {% if account.is_cash %}
+                                <span class="badge bg-success">是</span>
+                                {% else %}
+                                <span class="text-muted">否</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ "%.2f"|format(account.current_balance|float) }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="editAccount('{{ account.guid }}', '{{ account.name }}', '{{ account.account_type }}', '{{ account.code or "" }}', '{{ account.description or "" }}', {{ account.hidden|lower }}, {{ account.placeholder|lower }}, {{ account.is_cash|lower }}, '{{ account.parent_guid or "" }}')">
+                                    编辑
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteAccount('{{ account.guid }}', '{{ account.name }}')">
+                                    删除
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">暂无科目数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑科目模态框 -->
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">添加科目</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="accountForm" method="post" action="/accounts/manage">
+                <div class="modal-body">
+                    <input type="hidden" id="accountGuid" name="account_guid" value="">
+                    <input type="hidden" id="formAction" name="action" value="create">
+                    
+                    <div class="mb-3">
+                        <label for="accountName" class="form-label">科目名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="accountName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountType" class="form-label">科目类型 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="accountType" name="account_type" required>
+                            <option value="">请选择</option>
+                            <option value="ASSET">资产</option>
+                            <option value="CURRENT_ASSET">流动资产</option>
+                            <option value="FIXED_ASSET">固定资产</option>
+                            <option value="LIABILITY">负债</option>
+                            <option value="CURRENT_LIABILITY">流动负债</option>
+                            <option value="EQUITY">所有者权益</option>
+                            <option value="INCOME">收入</option>
+                            <option value="REVENUE">营业收入</option>
+                            <option value="EXPENSE">费用</option>
+                            <option value="COST">成本</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountCode" class="form-label">科目编码</label>
+                        <input type="text" class="form-control" id="accountCode" name="code">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="parentGuid" class="form-label">父级科目</label>
+                        <select class="form-select" id="parentGuid" name="parent_guid">
+                            <option value="">无（顶级科目）</option>
+                            {% for account in accounts %}
+                            <option value="{{ account.guid }}">{{ account.code or "" }} {{ account.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountDescription" class="form-label">说明</label>
+                        <textarea class="form-control" id="accountDescription" name="description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isHidden" name="hidden" value="true">
+                                <label class="form-check-label" for="isHidden">隐藏</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isPlaceholder" name="placeholder" value="true">
+                                <label class="form-check-label" for="isPlaceholder">仅作分类</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isCash" name="is_cash" value="true">
+                                <label class="form-check-label" for="isCash">现金/银行</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除科目 <strong id="deleteAccountName"></strong> 吗？</p>
+                <p class="text-danger small">注意：如果科目有子科目、余额不为0或已被使用，将无法删除。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form id="deleteForm" method="post" action="/accounts/manage" style="display: inline;">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" id="deleteAccountGuid" name="account_guid" value="">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editAccount(guid, name, accountType, code, description, hidden, placeholder, isCash, parentGuid) {
+    document.getElementById('modalTitle').textContent = '编辑科目';
+    document.getElementById('formAction').value = 'update';
+    document.getElementById('accountGuid').value = guid;
+    document.getElementById('accountName').value = name;
+    document.getElementById('accountType').value = accountType;
+    document.getElementById('accountCode').value = code || '';
+    document.getElementById('accountDescription').value = description || '';
+    document.getElementById('isHidden').checked = hidden;
+    document.getElementById('isPlaceholder').checked = placeholder;
+    document.getElementById('isCash').checked = isCash;
+    document.getElementById('parentGuid').value = parentGuid || '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('addAccountModal'));
+    modal.show();
+}
+
+function deleteAccount(guid, name) {
+    document.getElementById('deleteAccountName').textContent = name;
+    document.getElementById('deleteAccountGuid').value = guid;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// 重置表单
+document.getElementById('addAccountModal').addEventListener('hidden.bs.modal', function () {
+    if (document.getElementById('formAction').value === 'create') {
+        document.getElementById('accountForm').reset();
+        document.getElementById('formAction').value = 'create';
+        document.getElementById('accountGuid').value = '';
+        document.getElementById('modalTitle').textContent = '添加科目';
+    }
+});
+</script>
+{% endblock %}

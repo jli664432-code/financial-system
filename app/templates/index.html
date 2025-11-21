@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}主页 - 财务记账系统{% endblock %}
+
+{% block content %}
+<style>
+    /* 主页专用背景装饰 */
+    .home-bg {
+        background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(255,255,255,0.8)), url('https://cdnjs.cloudflare.com/ajax/libs/hero-patterns/1.0.0/bg-pattern-light.svg');
+        background-size: cover;
+        background-position: center;
+        border-radius: 12px;
+        padding: 50px 30px;
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .home-card {
+        background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(8px);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        padding: 30px;
+        max-width: 700px;
+        text-align: center;
+    }
+    .home-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+</style>
+
+<div class="home-bg">
+    <div class="home-card">
+        <div class="home-icon">📊</div>
+        <h2 class="mb-3">欢迎来到 <span class="text-primary fw-bold">财务记账系统</span></h2>
+        <p class="text-muted fs-6">
+            在这里，你可以快速查看和录入记账数据，随时掌握财务状况。
+        </p>
+
+        <!-- 按钮组 -->
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-4">
+            <a class="btn" href="/accounts/view">📑 查看会计科目</a>
+            <a class="btn" href="/transactions/view">💰 查看交易列表</a>
+        </div>
+
+        <!-- 业务流程快捷入口 -->
+        <div class="mt-4 pt-4 border-top">
+            <h5 class="mb-3">业务流程</h5>
+            <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                <a class="btn btn-sm" href="/business/sales/new">📦 创建销售单</a>
+                <a class="btn btn-sm" href="/business/purchases/new">🛒 创建采购单</a>
+                <a class="btn btn-sm" href="/business/expenses/new">💼 创建费用单</a>
+                <a class="btn btn-sm" href="/business/cashflow/new">💵 创建收付款单</a>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                业务流程会自动生成会计凭证、更新科目余额、关联现金流量分类
+            </p>
+        </div>
+
+        <!-- API说明 -->
+        <p class="mt-4 text-secondary fst-italic">
+           <br class="d-none d-md-inline">
+           
+        </p>
+    </div>
+</div>
+{% endblock %}

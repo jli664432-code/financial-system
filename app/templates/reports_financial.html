@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% block title %}会计报表 - 财务记账系统{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">📈 会计报表</h2>
+        {% if not is_current_report %}
+        <a href="/reports/financial/current" class="btn btn-primary">
+            ⚡ 快速生成当前报表
+        </a>
+        {% else %}
+        <a href="/reports/financial" class="btn btn-secondary">
+            📅 查看月度报表
+        </a>
+        {% endif %}
+    </div>
+    
+    <div class="alert alert-info" role="alert">
+        {% if report_month_label %}
+        当前展示的报表：<strong>{{ report_month_label }}</strong>
+        {% if is_current_report %}
+        （实时生成，未保存）
+        {% else %}
+        （上一整月）
+        {% endif %}
+        {% else %}
+        暂无可用的月度报表。
+        {% endif %}
+        {% if not is_current_report %}
+        系统会在跨月时自动重新生成最新报表，并清除旧报表缓存。
+        {% endif %}
+    </div>
+    
+    {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <strong>错误：</strong>{{ error }}
+        </div>
+    {% endif %}
+
+    <!-- 资产负债表 -->
+    {% if balance_sheet %}
+    <div class="mb-5">
+        <h3 class="mb-3">📊 资产负债表</h3>
+        <p class="text-muted">报表日期：{{ balance_sheet.report_date }}</p>
+        
+        <div class="row">
+            <!-- 资产 -->
+            <div class="col-md-6">
+                <h4 class="mb-3">资产</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 20%;">编码</th>
+                                <th style="width: 50%;">科目名称</th>
+                                <th style="width: 30%; text-align: right;">余额</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in balance_sheet.assets %}
+                            <tr {% if item.is_subtotal %}class="table-secondary"{% endif %}>
+                                <td>{{ item.code or "-" }}</td>
+                                <td>{{ item.name }}</td>
+                                <td style="text-align: right;">{{ "%.2f"|format(item.balance|float) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">暂无资产科目</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-info">
+                                <td colspan="2"><strong>资产合计</strong></td>
+                                <td style="text-align: right;"><strong>{{ "%.2f"|format(balance_sheet.asset_total|float) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 负债和所有者权益 -->
+            <div class="col-md-6">
+                <h4 class="mb-3">负债和所有者权益</h4>
+                
+                <!-- 负债 -->
+                <div class="mb-3">
+                    <h5 class="mb-2">负债</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 20%;">编码</th>
+                                    <th style="width: 50%;">科目名称</th>
+                                    <th style="width: 30%; text-align: right;">余额</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in balance_sheet.liabilities %}
+                                <tr {% if item.is_subtotal %}class="table-secondary"{% endif %}>
+                                    <td>{{ item.code or "-" }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td style="text-align: right;">{{ "%.2f"|format((item.balance|float)|abs) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">暂无负债科目</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-warning">
+                                    <td colspan="2"><strong>负债合计</strong></td>
+                                    <td style="text-align: right;"><strong>{{ "%.2f"|format(balance_sheet.liability_total|float) }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 所有者权益 -->
+                <div class="mb-3">
+                    <h5 class="mb-2">所有者权益</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 20%;">编码</th>
+                                    <th style="width: 50%;">科目名称</th>
+                                    <th style="width: 30%; text-align: right;">余额</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in balance_sheet.equity %}
+                                <tr {% if item.is_subtotal %}class="table-secondary"{% endif %}>
+                                    <td>{{ item.code or "-" }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td style="text-align: right;">{{ "%.2f"|format((item.balance|float)|abs) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">暂无权益科目</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-warning">
+                                    <td colspan="2"><strong>所有者权益合计</strong></td>
+                                    <td style="text-align: right;"><strong>{{ "%.2f"|format(balance_sheet.equity_total|float) }}</strong></td>
+                                </tr>
+                                {% if balance_sheet.net_income %}
+                                <tr class="table-success">
+                                    <td colspan="2"><strong>未分配利润（净利润）</strong></td>
+                                    <td style="text-align: right;"><strong>{{ "%.2f"|format(balance_sheet.net_income|float) }}</strong></td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 负债和所有者权益合计 -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <tbody>
+                            <tr class="table-info">
+                                <td colspan="2"><strong>负债和所有者权益合计</strong></td>
+                                <td style="text-align: right;"><strong>{{ "%.2f"|format(balance_sheet.total_liability_equity|float) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 平衡检查 -->
+        <div class="mt-3">
+            {% if balance_sheet.is_balanced %}
+                <div class="alert alert-success" role="alert">
+                    <strong>✓ 平衡检查通过</strong>：资产 = 负债 + 所有者权益 + 净利润
+                    <br>
+                    <small>
+                        资产合计：{{ "%.2f"|format(balance_sheet.asset_total|float) }} = 
+                        负债合计：{{ "%.2f"|format(balance_sheet.liability_total|float) }} + 
+                        所有者权益：{{ "%.2f"|format(balance_sheet.equity_total|float) }} + 
+                        净利润：{{ "%.2f"|format(balance_sheet.net_income|float) }}
+                    </small>
+                </div>
+            {% else %}
+                {% set diff = balance_sheet.asset_total|float - balance_sheet.total_liability_equity|float %}
+                <div class="alert alert-warning" role="alert">
+                    <strong>⚠ 平衡检查未通过</strong>：差额 = {{ "%.2f"|format(diff) }}
+                    <br>
+                    <small>
+                        资产合计：{{ "%.2f"|format(balance_sheet.asset_total|float) }} ≠ 
+                        负债 + 所有者权益 + 净利润：{{ "%.2f"|format(balance_sheet.total_liability_equity|float) }}
+                    </small>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 利润表 -->
+    {% if income_statement %}
+    <div class="mb-5">
+        <h3 class="mb-3">💰 利润表</h3>
+        <p class="text-muted">
+            期间：{{ income_statement.start_date }} 至 {{ income_statement.end_date }}
+        </p>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 20%;">编码</th>
+                        <th style="width: 50%;">科目名称</th>
+                        <th style="width: 30%; text-align: right;">金额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 收入 -->
+                    <tr class="table-primary">
+                        <td colspan="3"><strong>一、收入</strong></td>
+                    </tr>
+                    {% for item in income_statement.revenues %}
+                    <tr {% if item.is_subtotal %}class="table-secondary"{% endif %}>
+                        <td>{{ item.code or "-" }}</td>
+                        <td>{{ item.name }}</td>
+                        <td style="text-align: right;">{{ "%.2f"|format((item.amount|float)|abs) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">暂无收入科目</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-info">
+                        <td colspan="2"><strong>收入合计</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(income_statement.revenue_total|float) }}</strong></td>
+                    </tr>
+                    
+                    <!-- 费用 -->
+                    <tr class="table-primary">
+                        <td colspan="3"><strong>二、费用</strong></td>
+                    </tr>
+                    {% for item in income_statement.expenses %}
+                    <tr {% if item.is_subtotal %}class="table-secondary"{% endif %}>
+                        <td>{{ item.code or "-" }}</td>
+                        <td>{{ item.name }}</td>
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">暂无费用科目</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-info">
+                        <td colspan="2"><strong>费用合计</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(income_statement.expense_total|float) }}</strong></td>
+                    </tr>
+                    
+                    <!-- 净利润 -->
+                    <tr class="table-success">
+                        <td colspan="2"><strong>三、净利润</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(income_statement.net_income|float) }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 现金流量表 -->
+    {% if cashflow_statement %}
+    <div class="mb-5">
+        <h3 class="mb-3">💸 现金流量表</h3>
+        <p class="text-muted">
+            期间：{{ cashflow_statement.start_date }} 至 {{ cashflow_statement.end_date }}
+        </p>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50%;">项目</th>
+                        <th style="width: 25%; text-align: right;">流入</th>
+                        <th style="width: 25%; text-align: right;">流出</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 经营活动 -->
+                    <tr class="table-primary">
+                        <td colspan="3"><strong>一、经营活动产生的现金流量</strong></td>
+                    </tr>
+                    {% for item in cashflow_statement.operating.item_list %}
+                    <tr>
+                        <td>{{ item.category_name }}</td>
+                        {% if item.direction == "INFLOW" %}
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                        <td style="text-align: right;">-</td>
+                        {% else %}
+                        <td style="text-align: right;">-</td>
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">暂无经营活动现金流量</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-info">
+                        <td><strong>经营活动现金流量净额</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.operating.inflow|float) }}</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.operating.outflow|float) }}</strong></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td colspan="2"><strong>经营活动现金流量净额</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.operating.net|float) }}</strong></td>
+                    </tr>
+                    
+                    <!-- 投资活动 -->
+                    <tr class="table-primary">
+                        <td colspan="3"><strong>二、投资活动产生的现金流量</strong></td>
+                    </tr>
+                    {% for item in cashflow_statement.investing.item_list %}
+                    <tr>
+                        <td>{{ item.category_name }}</td>
+                        {% if item.direction == "INFLOW" %}
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                        <td style="text-align: right;">-</td>
+                        {% else %}
+                        <td style="text-align: right;">-</td>
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">暂无投资活动现金流量</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-info">
+                        <td><strong>投资活动现金流量小计</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.investing.inflow|float) }}</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.investing.outflow|float) }}</strong></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td colspan="2"><strong>投资活动现金流量净额</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.investing.net|float) }}</strong></td>
+                    </tr>
+                    
+                    <!-- 筹资活动 -->
+                    <tr class="table-primary">
+                        <td colspan="3"><strong>三、筹资活动产生的现金流量</strong></td>
+                    </tr>
+                    {% for item in cashflow_statement.financing.item_list %}
+                    <tr>
+                        <td>{{ item.category_name }}</td>
+                        {% if item.direction == "INFLOW" %}
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                        <td style="text-align: right;">-</td>
+                        {% else %}
+                        <td style="text-align: right;">-</td>
+                        <td style="text-align: right;">{{ "%.2f"|format(item.amount|float) }}</td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">暂无筹资活动现金流量</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-info">
+                        <td><strong>筹资活动现金流量小计</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.financing.inflow|float) }}</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.financing.outflow|float) }}</strong></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td colspan="2"><strong>筹资活动现金流量净额</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.financing.net|float) }}</strong></td>
+                    </tr>
+                    
+                    <!-- 合计 -->
+                    <tr class="table-warning">
+                        <td colspan="2"><strong>现金及现金等价物净增加额</strong></td>
+                        <td style="text-align: right;"><strong>{{ "%.2f"|format(cashflow_statement.total_net|float) }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not balance_sheet and not income_statement and not cashflow_statement %}
+        <div class="alert alert-info" role="alert">
+            <strong>提示：</strong>暂无会计报表数据。请先录入交易数据。
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

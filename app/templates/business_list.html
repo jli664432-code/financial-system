@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}业务流程列表 - 财务记账系统{% endblock %}
+
+{% block content %}
+<h2>📋 业务流程列表</h2>
+<p class="text-muted">查看所有业务单据</p>
+
+<div class="d-flex gap-2 mb-4">
+    <a href="/business/sales/new" class="btn">➕ 创建销售单</a>
+    <a href="/business/purchases/new" class="btn">➕ 创建采购单</a>
+    <a href="/business/expenses/new" class="btn">➕ 创建费用单</a>
+    <a href="/business/cashflow/new" class="btn">➕ 创建收付款单</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if documents %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>单据编号</th>
+            <th>单据类型</th>
+            <th>业务日期</th>
+            <th>往来单位</th>
+            <th>金额</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for doc in documents %}
+        <tr>
+            <td>{{ doc.doc_no or '-' }}</td>
+            <td>
+                {% if doc.doc_type == 'SALE' %}销售
+                {% elif doc.doc_type == 'PURCHASE' %}采购
+                {% elif doc.doc_type == 'EXPENSE' %}费用
+                {% elif doc.doc_type == 'CASHFLOW' %}收付款
+                {% else %}{{ doc.doc_type }}{% endif %}
+            </td>
+            <td>{{ doc.doc_date }}</td>
+            <td>{{ doc.partner_name or '-' }}</td>
+            <td>{{ "%.2f"|format(doc.total_amount) }}</td>
+            <td>
+                <span class="badge bg-success">{{ doc.status }}</span>
+            </td>
+            <td>
+                <a href="/transactions/{{ doc.transaction_guid }}" class="btn btn-sm">查看凭证</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info" role="alert">
+    暂无业务单据，请创建新的业务单据。
+</div>
+{% endif %}
+{% endblock %}
+

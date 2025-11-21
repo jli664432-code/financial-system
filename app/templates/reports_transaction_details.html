@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}交易明细报表 - 财务记账系统{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">📋 交易明细报表</h2>
+    <p class="text-muted">显示所有交易的明细信息，包含科目、金额等。</p>
+
+    {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <strong>错误：</strong>{{ error }}
+        </div>
+    {% endif %}
+    
+    {% if debug_info %}
+        <div class="alert alert-warning" role="alert">
+            <strong>调试信息：</strong>
+            <details>
+                <summary>错误详情（点击查看）</summary>
+                <pre style="margin-top: 10px; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;">
+{% if debug_info.error %}
+错误类型: {{ debug_info.error_type }}
+错误信息: {{ debug_info.error }}
+{% if debug_info.traceback %}
+错误堆栈:
+{% for line in debug_info.traceback %}{{ line }}
+{% endfor %}
+{% endif %}
+{% else %}
+{% if debug_info.validation_error %}验证错误: {{ debug_info.validation_error }}
+{% endif %}
+{% if debug_info.actual_fields %}实际字段: {{ debug_info.actual_fields|join(', ') }}
+{% endif %}
+{% if debug_info.sample_data %}示例数据: {{ debug_info.sample_data }}
+{% endif %}
+{% if debug_info.dict_error %}字典转换错误: {{ debug_info.dict_error }}
+{% endif %}
+{% if debug_info.row_type %}行数据类型: {{ debug_info.row_type }}
+{% endif %}
+{% endif %}</pre>
+            </details>
+        </div>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle shadow-sm">
+            <thead class="table-primary">
+                <tr>
+                    <th scope="col">记账日期</th>
+                    <th scope="col">交易ID</th>
+                    <th scope="col">科目名称</th>
+                    <th scope="col">金额</th>
+                    <th scope="col">摘要</th>
+                    <th scope="col">备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in details %}
+                    <tr>
+                        <td>
+                            {% set post_date = detail.get('post_date', '') %}
+                            {% if post_date %}
+                                {% if post_date is string %}
+                                    {{ post_date }}
+                                {% else %}
+                                    {{ post_date }}
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td style="font-family: monospace; font-size: 12px;">
+                            {% set tx_id = detail.get('tx_guid', '') %}
+                            {% if tx_id %}
+                                {{ tx_id[:8] }}...
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ detail.get('account_name', '-') }}</td>
+                        <td style="text-align: right; font-weight: {% set amt = detail.get('amount', 0) %}{% if amt and amt > 0 %}bold{% else %}normal{% endif %};">
+                            {% if amt %}
+                                {{ "%.2f"|format(amt|float) }}
+                            {% else %}
+                                0.00
+                            {% endif %}
+                        </td>
+                        <td>{{ detail.get('description') or "-" }}</td>
+                        <td>{{ detail.get('memo') or "-" }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">暂无数据</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

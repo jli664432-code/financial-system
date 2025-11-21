@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}财务记账系统{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg-light: #f7f7f7;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-muted: #64748b;
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-light);
+            color: #0f172a;
+        }
+
+        /* 顶部导航（使用 Bootstrap navbar，但保留你的配色） */
+        header.navbar {
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+        .navbar-nav .nav-link {
+            color: rgba(255, 255, 255, 0.92);
+            border-radius: 6px;
+            padding: 8px 12px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .navbar-nav .nav-link:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        .navbar-nav .nav-link.active {
+            background: rgba(255,255,255,0.25);
+            color: #fff;
+            font-weight: 600;
+        }
+        /* 修正导航折叠区域在深色背景下的内边距 */
+        .navbar-collapse {
+            gap: 8px;
+        }
+
+        /* 主体区：使用卡片包裹内容，统一阴影和圆角 */
+        main {
+            padding: 24px 0;
+        }
+        .content-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+        }
+
+        /* 表格优化（保持你原本结构和选择器） */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+        th {
+            background: #f1f5f9;
+            text-align: left;
+        }
+        tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        /* 按钮（保留你的 .btn 以不影响现有页面，但增强交互） */
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            border: none;
+        }
+        .btn:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 4px 10px rgba(37,99,235,0.3);
+        }
+        .btn:focus-visible {
+            outline: 2px solid rgba(37,99,235,0.5);
+            outline-offset: 2px;
+        }
+
+        /* 表单（保持原结构，增强焦点态） */
+        form label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cbd5f7;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: #fff;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        form input:focus, form select:focus, form textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+            outline: none;
+        }
+        form .two-columns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        /* 标签与分组盒子 */
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            font-size: 12px;
+            color: #475569;
+            margin-left: 6px;
+        }
+        .split-box {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: #f8fafc;
+        }
+
+        footer {
+            text-align: center;
+            margin: 32px 0 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 992px) {
+            .navbar-nav .nav-link {
+                padding: 10px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航：更美观且可在移动端折叠 -->
+    <header class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <!-- 简洁图标（纯装饰，不改变功能） -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="14" rx="2" stroke="white" stroke-width="1.5"></rect>
+                    <path d="M7 8h10M7 12h10M7 16h6" stroke="white" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+                <span class="ms-2">财务记账系统</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                    aria-controls="mainNav" aria-expanded="false" aria-label="切换导航">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/accounts/view" class="nav-link {% if '/accounts' in request.path %}active{% endif %}">科目管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/transactions/view" class="nav-link {% if '/transactions/view' in request.path %}active{% endif %}">交易列表</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if '/business' in request.path %}active{% endif %}" href="#" id="businessDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            业务流程
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="businessDropdown">
+                            <li><a class="dropdown-item" href="/business/list">业务单据列表</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/business/sales/new">创建销售单</a></li>
+                            <li><a class="dropdown-item" href="/business/purchases/new">创建采购单</a></li>
+                            <li><a class="dropdown-item" href="/business/expenses/new">创建费用单</a></li>
+                            <li><a class="dropdown-item" href="/business/cashflow/new">创建收付款单</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/reports/balances" class="nav-link {% if '/reports/balances' in request.path %}active{% endif %}">科目余额报表</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/reports/transaction-details" class="nav-link {% if '/reports/transaction-details' in request.path %}active{% endif %}">交易明细报表</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/reports/financial" class="nav-link {% if '/reports/financial' in request.path %}active{% endif %}">会计报表</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体内容区域 -->
+    <main>
+        <div class="container">
+            <div class="content-card">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </main>
+
+    <footer>© {{ current_year }} FastAPI 记账示例项目</footer>
+
+    <!-- Bootstrap JS（用于导航折叠等交互） -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
