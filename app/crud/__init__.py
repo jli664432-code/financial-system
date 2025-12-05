@@ -28,6 +28,16 @@ from .monthly_report import (
     replace_reports,
     get_current_cached_month,
 )
+from .fixed_expense import (
+    list_fixed_expenses,
+    get_fixed_expense,
+    create_fixed_expense,
+    update_fixed_expense,
+    delete_fixed_expense,
+    execute_fixed_expense,
+    execute_all_due_fixed_expenses,
+    is_due,
+)
 
 __all__ = [
     "list_accounts",
@@ -49,5 +59,13 @@ __all__ = [
     "get_reports_for_month",
     "replace_reports",
     "get_current_cached_month",
+    "list_fixed_expenses",
+    "get_fixed_expense",
+    "create_fixed_expense",
+    "update_fixed_expense",
+    "delete_fixed_expense",
+    "execute_fixed_expense",
+    "execute_all_due_fixed_expenses",
+    "is_due",
 ]
 

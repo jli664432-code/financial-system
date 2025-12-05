@@ -13,6 +13,11 @@ from .common import (
     AccountBalanceResponse,
     TransactionDetailResponse,
 )
+from .fixed_expense import (
+    FixedExpenseCreate,
+    FixedExpenseUpdate,
+    FixedExpenseResponse,
+)
 from .business import (
     BusinessDocumentResponse,
     BusinessDocumentType,
@@ -37,5 +42,8 @@ __all__ = [
     "PurchaseDocumentCreate",
     "ExpenseDocumentCreate",
     "CashflowDocumentCreate",
+    "FixedExpenseCreate",
+    "FixedExpenseUpdate",
+    "FixedExpenseResponse",
 ]
 

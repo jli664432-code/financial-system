@@ -12,6 +12,7 @@ from .split import Split
 from .cashflow_type import CashflowType
 from .business_document import BusinessDocument, BusinessDocumentItem
 from .monthly_report import MonthlyReport
+from .fixed_expense import FixedExpense
 
 # 读取数据库中的只读视图，用于生成报表数据。
 v_account_balance = Table(
@@ -34,6 +35,7 @@ __all__ = [
     "BusinessDocument",
     "BusinessDocumentItem",
     "MonthlyReport",
+    "FixedExpense",
     "v_account_balance",
     "v_transaction_detail",
 ]

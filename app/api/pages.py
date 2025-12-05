@@ -2,6 +2,7 @@
 页面路由，提供浏览器界面。
 """
 from datetime import date
+from calendar import monthrange
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -17,9 +18,11 @@ from ..crud import account as account_crud
 from ..crud import transaction as transaction_crud
 from ..crud import financial_report as financial_report_crud
 from ..crud import business as business_crud
+from ..crud import fixed_expense as fixed_expense_crud
 from ..database import get_db
 from ..schemas.transaction import SplitCreate, TransactionCreate
 from ..schemas import AccountBalanceResponse, TransactionDetailResponse
+from ..schemas.fixed_expense import FixedExpenseCreate, FixedExpenseUpdate
 from ..schemas.business import (
     BusinessDocumentCreate,
     BusinessDocumentItemCreate,
@@ -49,6 +52,55 @@ def _common_context() -> Dict[str, Any]:
     """提供模板公用上下文。"""
 
     return {"current_year": date.today().year}
+
+
+def _parse_decimal(value: str, field_label: str) -> Decimal:
+    if value is None or value == "":
+        raise ValueError(f"{field_label} 不能为空")
+    try:
+        amount = Decimal(value)
+    except InvalidOperation as exc:  # noqa: PERF203
+        raise ValueError(f"{field_label} 格式不正确") from exc
+    if amount <= 0:
+        raise ValueError(f"{field_label} 必须大于 0")
+    return amount
+
+
+def _build_fixed_expense_payload(form_data) -> FixedExpenseCreate:
+    name = (form_data.get("name") or "").strip()
+    if not name:
+        raise ValueError("费用名称不能为空")
+
+    amount = _parse_decimal(form_data.get("amount"), "扣款金额")
+
+    expense_account_guid = form_data.get("expense_account_guid")
+    primary_account_guid = form_data.get("primary_account_guid")
+
+    if not expense_account_guid:
+        raise ValueError("请选择费用科目")
+    if not primary_account_guid:
+        raise ValueError("请选择优先扣款科目")
+
+    fallback_guid = form_data.get("fallback_account_guid") or None
+
+    day_raw = form_data.get("day_of_month")
+    try:
+        day_of_month = int(day_raw) if day_raw else 1
+    except ValueError as exc:  # noqa: PERF203
+        raise ValueError("扣款日格式不正确") from exc
+    day_of_month = max(1, min(day_of_month, 28))
+
+    is_active = bool(form_data.get("is_active"))
+
+    return FixedExpenseCreate(
+        name=name,
+        amount=amount,
+        expense_account_guid=expense_account_guid,
+        primary_account_guid=primary_account_guid,
+        fallback_account_guid=fallback_guid,
+        day_of_month=day_of_month,
+        is_active=is_active,
+    )
 
 
 def _transaction_form_context(
@@ -666,6 +718,186 @@ def current_financial_report_page(
         "is_current_report": True,
     } | _common_context()
     return templates.TemplateResponse("reports_financial.html", context)
+
+
+@router.get("/fixed-expenses")
+def fixed_expenses_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    success: str | None = None,
+    error: str | None = None,
+    warning: str | None = None,
+    edit_id: Optional[int] = None,
+) -> Any:
+    """固定费用配置页面。"""
+
+    expenses = fixed_expense_crud.list_fixed_expenses(db)
+    accounts = account_crud.list_accounts(db, include_hidden=True)
+    today = date.today()
+    rows = []
+    for expense in expenses:
+        max_day = monthrange(today.year, today.month)[1]
+        due_day = max(1, min(expense.day_of_month, max_day))
+        due_date = date(today.year, today.month, due_day)
+        rows.append(
+            {
+                "expense": expense,
+                "due_date": due_date,
+                "is_due": fixed_expense_crud.is_due(expense, today),
+            }
+        )
+
+    editing_expense = None
+    if edit_id:
+        for row in rows:
+            if row["expense"].id == edit_id:
+                editing_expense = row["expense"]
+                break
+
+    context = {
+        "request": request,
+        "accounts": accounts,
+        "fixed_expense_rows": rows,
+        "editing_expense": editing_expense,
+        "success": success,
+        "error": error,
+        "warning": warning,
+    } | _common_context()
+    return templates.TemplateResponse("fixed_expenses.html", context)
+
+
+@router.post("/fixed-expenses/manage")
+async def fixed_expenses_manage(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Any:
+    """
+    处理固定费用的新增、更新、删除。
+    """
+
+    form_data = await request.form()
+    action = form_data.get("action", "create")
+
+    try:
+        if action == "delete":
+            expense_id = form_data.get("expense_id")
+            if not expense_id:
+                raise ValueError("缺少固定费用 ID，无法删除。")
+            fixed_expense_crud.delete_fixed_expense(db, int(expense_id))
+            db.commit()
+            msg = quote_plus("固定费用已删除")
+            return RedirectResponse(f"/fixed-expenses?success={msg}", status_code=303)
+
+        payload = _build_fixed_expense_payload(form_data)
+
+        if action == "update":
+            expense_id = form_data.get("expense_id")
+            if not expense_id:
+                raise ValueError("缺少固定费用 ID，无法更新。")
+            fixed_expense_crud.update_fixed_expense(
+                db,
+                int(expense_id),
+                FixedExpenseUpdate(**payload.model_dump()),
+            )
+            db.commit()
+            msg = quote_plus(f"固定费用「{payload.name}」已更新")
+            return RedirectResponse(f"/fixed-expenses?success={msg}", status_code=303)
+
+        # 默认执行创建
+        fixed_expense_crud.create_fixed_expense(db, payload)
+        db.commit()
+        msg = quote_plus(f"固定费用「{payload.name}」已创建")
+        return RedirectResponse(f"/fixed-expenses?success={msg}", status_code=303)
+
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        error_msg = quote_plus(str(exc))
+        edit_id = form_data.get("expense_id") or ""
+        suffix = f"&edit_id={edit_id}" if edit_id else ""
+        return RedirectResponse(
+            f"/fixed-expenses?error={error_msg}{suffix}",
+            status_code=303,
+        )
+
+
+@router.post("/fixed-expenses/run")
+async def fixed_expenses_run(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Any:
+    """
+    执行固定费用扣款。
+    """
+
+    form_data = await request.form()
+    action = form_data.get("action", "single")
+    run_date_str = form_data.get("run_date")
+    try:
+        run_date_value = (
+            date.fromisoformat(run_date_str) if run_date_str else date.today()
+        )
+    except ValueError:
+        run_date_value = date.today()
+
+    try:
+        if action == "all":
+            results = fixed_expense_crud.execute_all_due_fixed_expenses(
+                db, run_date=run_date_value
+            )
+            db.commit()
+            if not results:
+                warn = quote_plus("本月暂无到期的固定费用，未执行。")
+                return RedirectResponse(f"/fixed-expenses?warning={warn}", status_code=303)
+
+            success_count = len([item for item in results if item[1]])
+            success_msg = quote_plus(
+                f"本次共执行 {len(results)} 项固定费用，成功 {success_count} 项。"
+            )
+            warning_parts: List[str] = []
+            for expense, _, warnings in results:
+                if warnings:
+                    warning_parts.append(
+                        f"{expense.name}：{'；'.join(warnings)}"
+                    )
+
+            redirect_url = f"/fixed-expenses?success={success_msg}"
+            if warning_parts:
+                warning_msg = quote_plus(" / ".join(warning_parts))
+                redirect_url += f"&warning={warning_msg}"
+            return RedirectResponse(redirect_url, status_code=303)
+
+        # 默认执行单个
+        expense_id = form_data.get("expense_id")
+        if not expense_id:
+            raise ValueError("缺少固定费用 ID，无法执行扣费。")
+        expense = fixed_expense_crud.get_fixed_expense(db, int(expense_id))
+        if expense is None:
+            raise ValueError("固定费用不存在。")
+
+        tx_guid, warnings = fixed_expense_crud.execute_fixed_expense(
+            db,
+            expense,
+            run_date=run_date_value,
+            force=True,
+        )
+        db.commit()
+
+        if tx_guid is None:
+            detail = "；".join(warnings) if warnings else "扣费失败"
+            raise ValueError(detail)
+
+        success_msg = quote_plus(
+            f"已执行 {expense.name} 的扣费，生成交易 {tx_guid}"
+        )
+        redirect_url = f"/fixed-expenses?success={success_msg}"
+        if warnings:
+            redirect_url += f"&warning={quote_plus('；'.join(warnings))}"
+        return RedirectResponse(redirect_url, status_code=303)
+
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        error_msg = quote_plus(str(exc))
+        return RedirectResponse(f"/fixed-expenses?error={error_msg}", status_code=303)
 
 
 # ============================================================

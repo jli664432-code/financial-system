@@ -16,6 +16,7 @@
 - ⚡ **实时报表**：快速生成当前日期的报表（不保存）
 - 💰 **现金流量分类**：支持经营活动、投资活动、筹资活动的现金流量分类
 - 📅 **月度报表缓存**：自动生成并缓存上一整月的报表快照
+- 🔁 **固定费用管理**：配置工资、房租、水电、社保等固定费用，自动扣款并生成交易
 
 ## 🛠️ 技术栈
 
@@ -77,6 +78,7 @@ cp .env.example .env
 
 编辑 `.env` 文件，配置数据库连接：
 
+**本地 MySQL：**
 ```env
 DATABASE_URL=mysql+pymysql://用户名:密码@主机:端口/数据库名
 ```
@@ -85,6 +87,18 @@ DATABASE_URL=mysql+pymysql://用户名:密码@主机:端口/数据库名
 ```env
 DATABASE_URL=mysql+pymysql://root:password@127.0.0.1:3306/accounting_system
 ```
+
+**云端 MySQL（阿里云、腾讯云、AWS 等）：**
+```env
+# 基本格式
+DATABASE_URL=mysql+pymysql://用户名:密码@云端主机地址:端口/数据库名
+
+# 示例（阿里云 RDS）
+DATABASE_URL=mysql+pymysql://username:password@rm-xxxxx.mysql.rds.aliyuncs.com:3306/accounting_system
+```
+
+> **提示**：如果密码包含特殊字符（如 `@`、`#`），需要进行 URL 编码。  
+> **详细说明**：请参考 [云端MySQL配置指南.md](云端MySQL配置指南.md) 获取完整的云端数据库配置说明，包括 SSL 连接、安全设置等。
 
 ### 5. 数据库准备
 
@@ -96,6 +110,7 @@ DATABASE_URL=mysql+pymysql://root:password@127.0.0.1:3306/accounting_system
 - `business_document_items` - 业务单据明细表
 - `cashflow_types` - 现金流量分类表
 - `monthly_reports` - 月度报表缓存表（可选）
+- `fixed_expenses` - 固定费用配置表（可选，但推荐创建）
 
 以及以下视图：
 - `v_account_balance` - 科目余额视图
@@ -155,6 +170,15 @@ start-app.bat
 
 - **月度报表** (`GET /reports/financial`)：查看上一整月的报表快照
 - **实时报表** (`GET /reports/financial/current`)：快速生成当前日期的报表（不保存）
+
+### 固定费用管理
+
+在 **“固定费用”** 页面可以配置工资、房租、水电、社保等固定扣费项目：
+
+- 支持设置扣款金额、费用科目、优先扣款科目（库存现金）、备用扣款科目（银行存款）和预计扣款日
+- 每次执行会自动生成标准的会计交易并记录到分录中
+- 如果库存现金余额不足，会自动改用备用科目并显示警报
+- 可手动执行单个配置，也可一键执行当月所有到期的固定费用
 
 ## 📁 项目结构
 
@@ -258,6 +282,11 @@ accounting-system/
 本项目采用 MIT 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
 
 ## 📝 更新日志
+
+### v0.2.0
+- 新增固定费用管理功能，可配置工资/房租/水电/社保等固定扣费
+- 支持优先扣库存现金、余额不足时自动切换银行存款并提醒
+- 新增固定费用执行页面与自动生成交易记录的逻辑
 
 ### v0.1.0
 - 初始版本发布

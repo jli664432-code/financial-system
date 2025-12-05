@@ -2,8 +2,7 @@
 {% block title %}会计报表 - 财务记账系统{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">📈 会计报表</h2>
         {% if not is_current_report %}
         <a href="/reports/financial/current" class="btn btn-primary">
@@ -389,5 +388,4 @@
             <strong>提示：</strong>暂无会计报表数据。请先录入交易数据。
         </div>
     {% endif %}
-</div>
 {% endblock %}

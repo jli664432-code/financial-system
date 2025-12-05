@@ -39,13 +39,22 @@ logs/
 
 # 备份目录
 backup_original/
+backup_*/
 *.bak
 *.backup
 
-# 临时文件
+# 临时文件和上传目录
+temp_upload/
 *.tmp
 *.temp
 .cache/
+
+# 压缩包文件
+*.zip
+*.tar
+*.tar.gz
+*.rar
+accounting-system*.zip
 
 # 测试覆盖率
 .coverage
