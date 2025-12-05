@@ -42,6 +42,8 @@ def list_transaction_details(
     """
     查询交易明细视图，可选按交易 ID 过滤。
     """
+    if v_transaction_detail is None:
+        raise RuntimeError("数据库视图 v_transaction_detail 不存在，请先执行 create_views.sql 创建视图")
     stmt = select(v_transaction_detail)
     if tx_guid:
         # 尝试使用 tx_guid 字段过滤

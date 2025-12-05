@@ -15,17 +15,26 @@ from .monthly_report import MonthlyReport
 from .fixed_expense import FixedExpense
 
 # 读取数据库中的只读视图，用于生成报表数据。
-v_account_balance = Table(
-    "v_account_balance",
-    Base.metadata,
-    autoload_with=engine,
-)
+# 使用延迟加载，如果视图不存在也不会导致启动失败
+try:
+    v_account_balance = Table(
+        "v_account_balance",
+        Base.metadata,
+        autoload_with=engine,
+    )
+except Exception:
+    # 如果视图不存在，创建一个占位符
+    v_account_balance = None
 
-v_transaction_detail = Table(
-    "v_transaction_detail",
-    Base.metadata,
-    autoload_with=engine,
-)
+try:
+    v_transaction_detail = Table(
+        "v_transaction_detail",
+        Base.metadata,
+        autoload_with=engine,
+    )
+except Exception:
+    # 如果视图不存在，创建一个占位符
+    v_transaction_detail = None
 
 __all__ = [
     "Account",

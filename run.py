@@ -12,7 +12,7 @@ def main() -> None:
     """
     uvicorn.run(
         "app.main:app",
-        host="127.0.0.1",
+        host="0.0.0.0",  # 监听所有网络接口，允许外部访问
         port=8000,
         reload=True,
         reload_dirs=["app"],  # 明确指定要监控的目录

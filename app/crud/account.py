@@ -168,6 +168,8 @@ def list_account_balances(db: Session):
     """
     查询账户余额视图。
     """
+    if v_account_balance is None:
+        raise RuntimeError("数据库视图 v_account_balance 不存在，请先执行 create_views.sql 创建视图")
     stmt = select(v_account_balance)
     # 尝试按 account_name 排序，如果字段不存在则跳过排序
     try:

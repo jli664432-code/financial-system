@@ -106,7 +106,6 @@ DATABASE_URL=mysql+pymysql://username:password@rm-xxxxx.mysql.rds.aliyuncs.com:3
 ```
 
 > **提示**：如果密码包含特殊字符（如 `@`、`#`），需要进行 URL 编码。  
-> **详细说明**：请参考 [云端MySQL配置指南.md](云端MySQL配置指南.md) 获取完整的云端数据库配置说明，包括 SSL 连接、安全设置等。
 
 ### 5. 数据库准备
 
@@ -287,9 +286,7 @@ accounting-system/
 
 欢迎提交 Issue 和 Pull Request！
 
-## 📄 许可证
 
-本项目采用 MIT 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
 
 ## 📝 更新日志
 
